@@ -1,7 +1,21 @@
-import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:shipper/features/dashboard/dashboard_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart';
+import '../../core/services/api_services.dart';
+import '../../routes/app_routes.dart';
 
+// ================= REGEX =================
+final RegExp emailRegex =
+RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+
+final RegExp panRegex =
+RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]{1}$');
+
+final RegExp aadhaarRegex =
+RegExp(r'^[0-9]{12}$');
+
+final RegExp gstRegex = RegExp(
+    r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$');
 
 class ShipperRegistrationScreen extends StatefulWidget {
   const ShipperRegistrationScreen({super.key});
@@ -13,7 +27,7 @@ class ShipperRegistrationScreen extends StatefulWidget {
 
 class _ShipperRegistrationScreenState
     extends State<ShipperRegistrationScreen> {
-  // Controllers
+  // ================= CONTROLLERS =================
   final fullNameCtrl = TextEditingController();
   final companyCtrl = TextEditingController();
   final phoneCtrl = TextEditingController();
@@ -29,6 +43,7 @@ class _ShipperRegistrationScreenState
 
   final gstCtrl = TextEditingController();
   final panCtrl = TextEditingController();
+  final tdsCtrl = TextEditingController();
   final aadhaarCtrl = TextEditingController();
 
   final bankAccCtrl = TextEditingController();
@@ -51,48 +66,115 @@ class _ShipperRegistrationScreenState
 
   String selectedRole = "Manager";
 
-  PlatformFile? gstFile;
-  PlatformFile? panFile;
-  PlatformFile? aadhaarFront;
-  PlatformFile? aadhaarBack;
+  // ================= PREFILL FOR SIDEBAR USER =================
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
 
-  /// FILE PICKER (PDF/JPG/JPEG/PNG < 10MB)
-  Future<void> _pickFile(Function(PlatformFile) onPicked) async {
+  Future<void> _loadUserData() async {
+    try {
+      final response = await ApiService.get("/me");
+
+      if (response["success"] == true) {
+        final user = response["user"];
+
+        fullNameCtrl.text = user["fullName"] ?? "";
+        companyCtrl.text = user["companyName"] ?? "";
+        phoneCtrl.text = user["mobileNumber"] ?? "";
+        emailCtrl.text = user["email"] ?? "";
+        gstCtrl.text = user["gstNumber"] ?? "";
+        panCtrl.text = user["panNumber"] ?? "";
+        aadhaarCtrl.text = user["aadhaarNumber"] ?? "";
+        bankAccCtrl.text = user["bankAccountNumber"] ?? "";
+        ifscCtrl.text = user["ifscCode"] ?? "";
+        bankNameCtrl.text = user["bankName"] ?? "";
+        holderNameCtrl.text = user["accountHolderName"] ?? "";
+      }
+
+    } catch (_) {}
+  }
+
+  // ================= VALIDATION =================
+  bool _validateForm() {
+    if (phoneCtrl.text.length != 10) {
+      _showError("Mobile number must be 10 digits");
+      return false;
+    }
+
+    if (!emailRegex.hasMatch(emailCtrl.text.trim())) {
+      _showError("Enter valid email address");
+      return false;
+    }
+
+    if (passwordCtrl.text.length != 6 ||
+        int.tryParse(passwordCtrl.text) == null) {
+      _showError("Password must be 6 digit numeric");
+      return false;
+    }
+
+    if (!panRegex.hasMatch(panCtrl.text.trim().toUpperCase())) {
+      _showError("Enter valid PAN number");
+      return false;
+    }
+
+    if (!aadhaarRegex.hasMatch(aadhaarCtrl.text.trim())) {
+      _showError("Aadhaar must be 12 digit numeric");
+      return false;
+    }
+
+    if (!gstRegex.hasMatch(gstCtrl.text.trim().toUpperCase())) {
+      _showError("Enter valid GST number");
+      return false;
+    }
+
+    if (bankAccCtrl.text.trim() != bankAccConfirmCtrl.text.trim()) {
+      _showError("Bank account numbers do not match");
+      return false;
+    }
+
+    if (!accepted) {
+      _showError("Please accept terms & conditions");
+      return false;
+    }
+
+    return true;
+  }
+  Future<void> _pickFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+      withData: false,
     );
 
     if (result != null) {
       final file = result.files.first;
-      final sizeMB = file.size / (1024 * 1024);
 
-      if (sizeMB > 10) {
-        _showSnack("File must be under 10 MB");
+      if (file.size > 10 * 1024 * 1024) {
+        _showError("File must be under 10 MB");
         return;
       }
 
-      setState(() => onPicked(file));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Selected: ${file.name}"),
+        ),
+      );
     }
   }
 
-  void _submit() {
-    if (!accepted) {
-      _showSnack("Please accept all policies");
-      return;
-    }
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const DashboardScreen()),
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
     );
   }
 
-  void _showSnack(String msg) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
-  }
-
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -113,28 +195,44 @@ class _ShipperRegistrationScreenState
               _textField("Full Name", fullNameCtrl, required: true),
               _textField("Company Name", companyCtrl, required: true),
 
-              // 🔥 ATTRACTIVE ROLE SELECTION
               _requiredLabel("Designation / Role"),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: roles.map((role) {
-                  final isSelected = selectedRole == role;
-                  return ChoiceChip(
-                    label: Text(role),
-                    selected: isSelected,
-                    selectedColor: Colors.orange,
-                    onSelected: (_) =>
-                        setState(() => selectedRole = role),
-                    labelStyle: TextStyle(
-                      color: isSelected
-                          ? Colors.white
-                          : Colors.black,
-                    ),
-                  );
-                }).toList(),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.orange),
+                  color: Colors.orange.withOpacity(0.05),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: selectedRole,
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                    items: roles.map((role) {
+                      return DropdownMenuItem(
+                        value: role,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.badge, color: Colors.orange, size: 18),
+                            const SizedBox(width: 8),
+                            Text(
+                              role,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() => selectedRole = value!);
+                    },
+                  ),
+                ),
               ),
+
 
               const SizedBox(height: 14),
 
@@ -159,14 +257,20 @@ class _ShipperRegistrationScreenState
                 ).copyWith(counterText: ""),
               ),
 
-              _textField("Email ID", emailCtrl,
-                  keyboard: TextInputType.emailAddress,
-                  required: true),
+              _textField(
+                "Email ID",
+                emailCtrl,
+                keyboard: TextInputType.emailAddress,
+                required: true,
+              ),
 
-              _textField("6-digit Password", passwordCtrl,
-                  keyboard: TextInputType.number,
-                  obscure: true,
-                  required: true),
+              _textField(
+                "6-digit Password",
+                passwordCtrl,
+                keyboard: TextInputType.number,
+                obscure: true,
+                required: true,
+              ),
 
               const SizedBox(height: 20),
               _sectionTitle("2) Address Details"),
@@ -176,85 +280,57 @@ class _ShipperRegistrationScreenState
               _textField("Landmark", landmarkCtrl),
               _textField("City", cityCtrl, required: true),
               _textField("State", stateCtrl, required: true),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("Country"),
-                    const SizedBox(height: 6),
-                    TextField(
-                      enabled: false,
-                      controller: TextEditingController(text: "India"),
-                      decoration: InputDecoration(
-                        prefixIcon: Container(
-                          width: 48,
-                          alignment: Alignment.center,
-                          child: const Text(
-                            "🇮🇳",
-                            style: TextStyle(fontSize: 20),
-                          ),
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              _textField(
+                "Country",
+                TextEditingController(text: "India"),
+                enabled: false,
               ),
-
-
-
-              _textField("PIN Code", pinCtrl,
-                  keyboard: TextInputType.number,
-                  required: true),
+              _textField(
+                "PIN Code",
+                pinCtrl,
+                keyboard: TextInputType.number,
+                required: true,
+              ),
 
               const SizedBox(height: 20),
               _sectionTitle("3) Identity & Compliance"),
 
               _textField("GST Number", gstCtrl, required: true),
-              _uploadTile(
-                "Upload GST Certificate",
-                gstFile,
-                    () => _pickFile((f) => gstFile = f),
-              ),
+              _uploadTile("Upload GST Certificate"),
 
               _textField("PAN Card Number", panCtrl, required: true),
-              _uploadTile(
-                "Upload PAN Card (Front)",
-                panFile,
-                    () => _pickFile((f) => panFile = f),
-              ),
+              _uploadTile("Upload PAN Card (Front Image)"),
 
-              _textField("Aadhaar Card Number", aadhaarCtrl,
-                  required: true),
-              _uploadTile(
-                "Upload Aadhaar Front",
-                aadhaarFront,
-                    () => _pickFile((f) => aadhaarFront = f),
-              ),
-              _uploadTile(
-                "Upload Aadhaar Back",
-                aadhaarBack,
-                    () => _pickFile((f) => aadhaarBack = f),
-              ),
+              _textField("TDS Certificate Number", tdsCtrl, required: true),
+              _uploadTile("Upload TDS Certificate"),
+
+              _textField("Aadhaar Card Number", aadhaarCtrl, required: true),
+              _uploadTile("Upload Aadhaar Front"),
+              _uploadTile("Upload Aadhaar Back"),
 
               const SizedBox(height: 20),
               _sectionTitle("4) Bank Details"),
 
-              _textField("Bank Account Number", bankAccCtrl,
-                  keyboard: TextInputType.number,
-                  required: true),
-              _textField("Re-enter Bank Account Number",
-                  bankAccConfirmCtrl,
-                  keyboard: TextInputType.number,
-                  required: true),
+              _textField(
+                "Bank Account Number",
+                bankAccCtrl,
+                keyboard: TextInputType.number,
+                required: true,
+              ),
+              _textField(
+                "Re-enter Bank Account Number",
+                bankAccConfirmCtrl,
+                keyboard: TextInputType.number,
+                required: true,
+              ),
               _textField("IFSC Code", ifscCtrl, required: true),
               _textField("Bank Name", bankNameCtrl, required: true),
-              _textField("Account Holder Name", holderNameCtrl,
-                  capitalized: true,
-                  required: true),
+              _textField(
+                "Account Holder Name",
+                holderNameCtrl,
+                capitalized: true,
+                required: true,
+              ),
 
               const SizedBox(height: 20),
               _sectionTitle("5) Confirmation"),
@@ -275,27 +351,79 @@ class _ShipperRegistrationScreenState
                 ],
               ),
 
-              const SizedBox(height: 10),
-              const Text(
-                "* Indicates mandatory fields",
-                style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.deepOrange),
-              ),
-
               const SizedBox(height: 20),
 
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: _submit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
+                  onPressed: () async {
+                    if (!_validateForm()) return;
+
+                    try {
+                      await ApiService.post(
+                        endpoint: "/auth/register",
+                        body: {
+                          "mobileNumber": phoneCtrl.text.trim(),
+                          "email": emailCtrl.text.trim(),
+
+                          "fullName": fullNameCtrl.text.trim(),
+                          "companyName": companyCtrl.text.trim(),
+                          "designation": selectedRole,
+
+                          "password": passwordCtrl.text.trim(),
+
+                          "buildingNumber": buildingCtrl.text.trim(),
+                          "areaName": areaCtrl.text.trim(),
+                          "landmark": landmarkCtrl.text.trim(),
+                          "city": cityCtrl.text.trim(),
+                          "state": stateCtrl.text.trim(),
+                          "pinCode": pinCtrl.text.trim(),
+
+                          "gstNumber": gstCtrl.text.trim(),
+                          "tdsNumber": tdsCtrl.text.trim(),
+                          "panNumber": panCtrl.text.trim(),
+                          "aadhaarNumber": aadhaarCtrl.text.trim(),
+
+                          "bankAccountNumber": bankAccCtrl.text.trim(),
+                          "ifscCode": ifscCtrl.text.trim(),
+                          "bankName": bankNameCtrl.text.trim(),
+                          "accountHolderName": holderNameCtrl.text.trim(),
+                        },
+                      );
+
+                      // ✅ Success popup
+                      showDialog(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          title: const Text("Success"),
+                          content: const Text("Login successfully completed"),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                Navigator.pushNamedAndRemoveUntil(
+                                  context,
+                                  AppRoutes.bottomNav,
+                                      (route) => false,
+                                );
+                              },
+                              child: const Text("OK"),
+                            )
+                          ],
+                        ),
+                      );
+                    } catch (e) {
+                      _showError("Failed to save registration data");
+                    }
+                  },
+
                   child: const Text(
                     "Submit Registration",
                     style: TextStyle(
@@ -304,8 +432,6 @@ class _ShipperRegistrationScreenState
                   ),
                 ),
               ),
-
-              const SizedBox(height: 30),
             ],
           ),
         ),
@@ -313,17 +439,17 @@ class _ShipperRegistrationScreenState
     );
   }
 
-  // ---------------- HELPERS ----------------
-
+  // ================= HELPERS =================
   Widget _sectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12, top: 10),
       child: Text(
         title,
         style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.orange),
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Colors.orange,
+        ),
       ),
     );
   }
@@ -332,13 +458,17 @@ class _ShipperRegistrationScreenState
     return RichText(
       text: TextSpan(
         text: text,
-        style: const TextStyle(color: Colors.black87),
+        style: const TextStyle(
+          color: Colors.black87,
+          fontSize: 14,
+        ),
         children: const [
           TextSpan(
             text: " *",
             style: TextStyle(
-                color: Colors.deepOrange,
-                fontWeight: FontWeight.bold),
+              color: Colors.deepOrange,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
@@ -385,38 +515,28 @@ class _ShipperRegistrationScreenState
     );
   }
 
-  Widget _uploadTile(
-      String title, PlatformFile? file, VoidCallback onTap) {
+  Widget _uploadTile(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: InkWell(
-        onTap: onTap,
+        onTap: _pickFile, // ✅ WORKING NOW
+        borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding:
-          const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey.shade400),
           ),
           child: Row(
             children: [
-              const Icon(Icons.upload_file,
-                  color: Colors.orange),
+              const Icon(Icons.upload_file, color: Colors.orange),
               const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  file == null ? title : file.name,
-                  style: TextStyle(
-                      color: file == null
-                          ? Colors.black
-                          : Colors.green),
-                ),
-              ),
+              Expanded(child: Text(title)),
             ],
           ),
         ),
       ),
     );
   }
-}
 
+}

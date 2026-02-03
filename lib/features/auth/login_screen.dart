@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../routes/app_routes.dart';
+import '../../core/services/otp_service.dart';
 import 'otp_popup.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -17,11 +17,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool isAccepted = false;
 
-  void _onConfirm() {
-    final phone = phoneController.text.trim();
+  Future<void> _onConfirm() async {
+    final rawPhone = phoneController.text.trim();
     final email = emailController.text.trim();
 
-    if (phone.length != 10) {
+    if (rawPhone.length != 10) {
       _showSnack("Enter valid 10 digit mobile number");
       return;
     }
@@ -36,15 +36,23 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // ✅ SHOW OTP POPUP
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const OtpPopup(),
-    );
+    final phone = "+91$rawPhone";
 
+    try {
+      // ✅ STEP 9: SAVE PHONE + EMAIL IN MONGODB
+      await OtpService.initLogin(rawPhone, email);
+
+      // ✅ OPEN OTP POPUP (NO UI CHANGE)
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const OtpPopup(),
+      );
+    } catch (e) {
+       print("LOGIN ERROR : $e");
+      _showSnack("Something went wrong. Please try again");
+    }
   }
-
 
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -193,4 +201,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-

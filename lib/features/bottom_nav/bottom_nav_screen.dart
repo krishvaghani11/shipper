@@ -15,7 +15,6 @@ class BottomNavScreen extends StatefulWidget {
 
 class _BottomNavScreenState extends State<BottomNavScreen> {
   int _currentIndex = 0;
-
   final List<Widget> _screens = const [
     DashboardScreen(), // Home
     MoveScreen(),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../branch/branch_screen.dart';
 import '../language/language_screen.dart';
 import '../registration/shipper_registration_screen.dart';
+import 'helpandsupport/help_support_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -271,7 +272,17 @@ class _ShipperDrawer extends StatelessWidget {
           _drawerItem(Icons.local_shipping, "Truck Tracking", () {}),
           _drawerItem(Icons.workspace_premium, "Membership", () {}),
           _drawerItem(Icons.card_giftcard, "Refer & Earn", () {}),
-          _drawerItem(Icons.support_agent, "Help & Support", () {}),
+          _drawerItem(
+              Icons.support_agent,
+              "Help & Support",
+                  () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const HelpSupportScreen(),
+                  ),
+                );
+                  }),
           _drawerItem(
             Icons.language,
             "Language",

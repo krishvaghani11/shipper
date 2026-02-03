@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../routes/app_routes.dart'; // ✅ ADD THIS IMPORT
+import '../../routes/app_routes.dart';
+import '../../core/services/otp_service.dart';
 
 class OtpPopup extends StatelessWidget {
   const OtpPopup({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final TextEditingController otpController = TextEditingController();
+
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -27,6 +30,7 @@ class OtpPopup extends StatelessWidget {
 
             // OTP FIELD
             TextField(
+              controller: otpController, // ✅ ADDED
               maxLength: 6,
               textAlign: TextAlign.center,
               keyboardType: TextInputType.number,
@@ -48,13 +52,36 @@ class OtpPopup extends StatelessWidget {
 
             const SizedBox(height: 14),
 
-            // ICONS (UI ONLY)
+            // ICONS (EMAIL OTP SEND LOGIC ADDED)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: const [
-                Icon(Icons.sms, color: Colors.grey),
-                Icon(Icons.email, color: Colors.orange),
-                Icon(Icons.chat, color: Colors.grey),
+              children: [
+                const Icon(Icons.sms, color: Colors.grey),
+
+                GestureDetector(
+                  onTap: () async {
+                    try {
+                      await OtpService.sendEmailOtp(OtpService.userEmail!);
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("OTP sent successfully to your email"),
+                        ),
+                      );
+                    } catch (e) {
+                      debugPrint("SEND OTP ERROR: $e");
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Failed to send OTP"),
+                        ),
+                      );
+                    }
+                  },
+
+                  child: const Icon(Icons.email, color: Colors.orange),
+                ),
+
+                const Icon(Icons.chat, color: Colors.grey),
               ],
             ),
 
@@ -65,7 +92,6 @@ class OtpPopup extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {
-                      // ✅ JUST CLOSE OTP (BACK TO LOGIN)
                       Navigator.pop(context);
                     },
                     child: const Text(
@@ -77,13 +103,27 @@ class OtpPopup extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      // ✅ OTP VERIFIED → DASHBOARD + BOTTOM NAV
-                      Navigator.pushNamedAndRemoveUntil(
-                        context,
-                        AppRoutes.bottomNav,
-                            (route) => false,
-                      );
+                    onPressed: () async {
+                      try {
+                        // ✅ STEP 10B: VERIFY OTP
+                        await OtpService.verifyOtp(
+                          OtpService.userEmail!,
+                          otpController.text.trim(),
+                        );
+
+                        // ✅ SUCCESS → REGISTRATION SCREEN
+                        Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          AppRoutes.shipperRegistration,
+                              (route) => false,
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Invalid OTP"),
+                          ),
+                        );
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,
@@ -99,5 +139,3 @@ class OtpPopup extends StatelessWidget {
     );
   }
 }
-
-
