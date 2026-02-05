@@ -1,21 +1,19 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart';
 import '../../core/services/api_services.dart';
+import '../../core/services/otp_service.dart';
 import '../../routes/app_routes.dart';
 
 // ================= REGEX =================
-final RegExp emailRegex =
-RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+final RegExp emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
 
-final RegExp panRegex =
-RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]{1}$');
+final RegExp panRegex = RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]{1}$');
 
-final RegExp aadhaarRegex =
-RegExp(r'^[0-9]{12}$');
+final RegExp aadhaarRegex = RegExp(r'^[0-9]{12}$');
 
 final RegExp gstRegex = RegExp(
-    r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$');
+  r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$',
+);
 
 class ShipperRegistrationScreen extends StatefulWidget {
   const ShipperRegistrationScreen({super.key});
@@ -25,8 +23,7 @@ class ShipperRegistrationScreen extends StatefulWidget {
       _ShipperRegistrationScreenState();
 }
 
-class _ShipperRegistrationScreenState
-    extends State<ShipperRegistrationScreen> {
+class _ShipperRegistrationScreenState extends State<ShipperRegistrationScreen> {
   // ================= CONTROLLERS =================
   final fullNameCtrl = TextEditingController();
   final companyCtrl = TextEditingController();
@@ -75,24 +72,41 @@ class _ShipperRegistrationScreenState
 
   Future<void> _loadUserData() async {
     try {
-      final response = await ApiService.get("/me");
+      final email = OtpService.userEmail;
+      if (email == null) return;
+
+      final response = await ApiService.get("/me?email=$email");
 
       if (response["success"] == true) {
         final user = response["user"];
+        print("DEBUG USER DATA: $user"); // ✅ DEBUG LOG
 
         fullNameCtrl.text = user["fullName"] ?? "";
         companyCtrl.text = user["companyName"] ?? "";
         phoneCtrl.text = user["mobileNumber"] ?? "";
         emailCtrl.text = user["email"] ?? "";
+
+        passwordCtrl.text = user["password"] ?? "";
+
+        buildingCtrl.text = user["buildingNumber"] ?? "";
+        areaCtrl.text = user["areaName"] ?? "";
+        landmarkCtrl.text = user["landmark"] ?? "";
+        cityCtrl.text = user["city"] ?? "";
+        stateCtrl.text = user["state"] ?? "";
+        pinCtrl.text = user["pinCode"] ?? "";
+
         gstCtrl.text = user["gstNumber"] ?? "";
+        tdsCtrl.text = user["tdsNumber"] ?? "";
         panCtrl.text = user["panNumber"] ?? "";
         aadhaarCtrl.text = user["aadhaarNumber"] ?? "";
+
         bankAccCtrl.text = user["bankAccountNumber"] ?? "";
+        bankAccConfirmCtrl.text =
+            user["bankAccountNumber"] ?? ""; // Auto-fill confirm
         ifscCtrl.text = user["ifscCode"] ?? "";
         bankNameCtrl.text = user["bankName"] ?? "";
         holderNameCtrl.text = user["accountHolderName"] ?? "";
       }
-
     } catch (_) {}
   }
 
@@ -141,6 +155,7 @@ class _ShipperRegistrationScreenState
 
     return true;
   }
+
   Future<void> _pickFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -156,21 +171,15 @@ class _ShipperRegistrationScreenState
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Selected: ${file.name}"),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Selected: ${file.name}")));
     }
   }
 
-
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
@@ -198,7 +207,10 @@ class _ShipperRegistrationScreenState
               _requiredLabel("Designation / Role"),
               const SizedBox(height: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: Colors.orange),
@@ -214,7 +226,11 @@ class _ShipperRegistrationScreenState
                         value: role,
                         child: Row(
                           children: [
-                            const Icon(Icons.badge, color: Colors.orange, size: 18),
+                            const Icon(
+                              Icons.badge,
+                              color: Colors.orange,
+                              size: 18,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               role,
@@ -233,7 +249,6 @@ class _ShipperRegistrationScreenState
                 ),
               ),
 
-
               const SizedBox(height: 14),
 
               _requiredLabel("Mobile Number"),
@@ -247,11 +262,7 @@ class _ShipperRegistrationScreenState
                     padding: EdgeInsets.only(left: 12, right: 8),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text("🇮🇳"),
-                        SizedBox(width: 6),
-                        Text("+91"),
-                      ],
+                      children: [Text("🇮🇳"), SizedBox(width: 6), Text("+91")],
                     ),
                   ),
                 ).copyWith(counterText: ""),
@@ -340,8 +351,7 @@ class _ShipperRegistrationScreenState
                   Checkbox(
                     value: accepted,
                     activeColor: Colors.orange,
-                    onChanged: (v) =>
-                        setState(() => accepted = v ?? false),
+                    onChanged: (v) => setState(() => accepted = v ?? false),
                   ),
                   const Expanded(
                     child: Text(
@@ -367,36 +377,37 @@ class _ShipperRegistrationScreenState
                     if (!_validateForm()) return;
 
                     try {
-                      await ApiService.post(
-                        endpoint: "/auth/register",
-                        body: {
-                          "mobileNumber": phoneCtrl.text.trim(),
-                          "email": emailCtrl.text.trim(),
+                      final body = {
+                        "mobileNumber": phoneCtrl.text.trim(),
+                        "email": emailCtrl.text.trim(),
 
-                          "fullName": fullNameCtrl.text.trim(),
-                          "companyName": companyCtrl.text.trim(),
-                          "designation": selectedRole,
+                        "fullName": fullNameCtrl.text.trim(),
+                        "companyName": companyCtrl.text.trim(),
+                        "designation": selectedRole,
 
-                          "password": passwordCtrl.text.trim(),
+                        "password": passwordCtrl.text.trim(),
 
-                          "buildingNumber": buildingCtrl.text.trim(),
-                          "areaName": areaCtrl.text.trim(),
-                          "landmark": landmarkCtrl.text.trim(),
-                          "city": cityCtrl.text.trim(),
-                          "state": stateCtrl.text.trim(),
-                          "pinCode": pinCtrl.text.trim(),
+                        "buildingNumber": buildingCtrl.text.trim(),
+                        "areaName": areaCtrl.text.trim(),
+                        "landmark": landmarkCtrl.text.trim(),
+                        "city": cityCtrl.text.trim(),
+                        "state": stateCtrl.text.trim(),
+                        "pinCode": pinCtrl.text.trim(),
 
-                          "gstNumber": gstCtrl.text.trim(),
-                          "tdsNumber": tdsCtrl.text.trim(),
-                          "panNumber": panCtrl.text.trim(),
-                          "aadhaarNumber": aadhaarCtrl.text.trim(),
+                        "gstNumber": gstCtrl.text.trim(),
+                        "tdsNumber": tdsCtrl.text.trim(),
+                        "panNumber": panCtrl.text.trim(),
+                        "aadhaarNumber": aadhaarCtrl.text.trim(),
 
-                          "bankAccountNumber": bankAccCtrl.text.trim(),
-                          "ifscCode": ifscCtrl.text.trim(),
-                          "bankName": bankNameCtrl.text.trim(),
-                          "accountHolderName": holderNameCtrl.text.trim(),
-                        },
-                      );
+                        "bankAccountNumber": bankAccCtrl.text.trim(),
+                        "ifscCode": ifscCtrl.text.trim(),
+                        "bankName": bankNameCtrl.text.trim(),
+                        "accountHolderName": holderNameCtrl.text.trim(),
+                      };
+
+                      print("DEBUG REGISTER BODY: $body");
+
+                      await ApiService.post(endpoint: "/register", body: body);
 
                       // ✅ Success popup
                       showDialog(
@@ -411,11 +422,11 @@ class _ShipperRegistrationScreenState
                                 Navigator.pushNamedAndRemoveUntil(
                                   context,
                                   AppRoutes.bottomNav,
-                                      (route) => false,
+                                  (route) => false,
                                 );
                               },
                               child: const Text("OK"),
-                            )
+                            ),
                           ],
                         ),
                       );
@@ -426,9 +437,7 @@ class _ShipperRegistrationScreenState
 
                   child: const Text(
                     "Submit Registration",
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -458,10 +467,7 @@ class _ShipperRegistrationScreenState
     return RichText(
       text: TextSpan(
         text: text,
-        style: const TextStyle(
-          color: Colors.black87,
-          fontSize: 14,
-        ),
+        style: const TextStyle(color: Colors.black87, fontSize: 14),
         children: const [
           TextSpan(
             text: " *",
@@ -476,14 +482,14 @@ class _ShipperRegistrationScreenState
   }
 
   Widget _textField(
-      String label,
-      TextEditingController controller, {
-        TextInputType keyboard = TextInputType.text,
-        bool obscure = false,
-        bool enabled = true,
-        bool capitalized = false,
-        bool required = false,
-      }) {
+    String label,
+    TextEditingController controller, {
+    TextInputType keyboard = TextInputType.text,
+    bool obscure = false,
+    bool enabled = true,
+    bool capitalized = false,
+    bool required = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Column(
@@ -509,9 +515,7 @@ class _ShipperRegistrationScreenState
   InputDecoration _inputDecoration({Widget? prefix}) {
     return InputDecoration(
       prefixIcon: prefix,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
 
@@ -538,5 +542,4 @@ class _ShipperRegistrationScreenState
       ),
     );
   }
-
 }

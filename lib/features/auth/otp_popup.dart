@@ -1,134 +1,107 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/app_colors.dart';
 import '../../routes/app_routes.dart';
-import '../../core/services/otp_service.dart';
 
-class OtpPopup extends StatelessWidget {
-  const OtpPopup({super.key});
+class OtpPopup extends StatefulWidget {
+  final String phoneNumber;
+  const OtpPopup({super.key, required this.phoneNumber});
+
+  @override
+  State<OtpPopup> createState() => _OtpPopupState();
+}
+
+class _OtpPopupState extends State<OtpPopup> {
+  Future<void> _handleNext() async {
+    // Navigate directly to OTP Screen without API call (as requested)
+    Navigator.pop(context); // Close Popup
+    Navigator.pushNamed(context, AppRoutes.otp);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final TextEditingController otpController = TextEditingController();
-
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: Colors.white,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(24, 30, 24, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              "Enter OTP",
+              "Sign In with phone number",
               style: TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+                fontFamily: "Poppins",
               ),
-            ),
-
-            const SizedBox(height: 14),
-
-            // OTP FIELD
-            TextField(
-              controller: otpController, // ✅ ADDED
-              maxLength: 6,
               textAlign: TextAlign.center,
-              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+
+            // Phone Number Display
+            Text(
+              widget.phoneNumber, // e.g. (+91) 12345 67890
               style: const TextStyle(
-                fontSize: 20,
-                letterSpacing: 6,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+                fontFamily: "Poppins",
               ),
-              decoration: InputDecoration(
-                counterText: "",
-                hintText: "------",
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
-                ),
+              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: 16),
+            const Text(
+              "We will send the authentication code\nto the phone number you entered.\nDo you want continue?",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 13,
+                height: 1.5,
+                fontFamily: "Poppins",
               ),
             ),
 
-            const SizedBox(height: 14),
-
-            // ICONS (EMAIL OTP SEND LOGIC ADDED)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                const Icon(Icons.sms, color: Colors.grey),
-
-                GestureDetector(
-                  onTap: () async {
-                    try {
-                      await OtpService.sendEmailOtp(OtpService.userEmail!);
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("OTP sent successfully to your email"),
-                        ),
-                      );
-                    } catch (e) {
-                      debugPrint("SEND OTP ERROR: $e");
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Failed to send OTP"),
-                        ),
-                      );
-                    }
-                  },
-
-                  child: const Icon(Icons.email, color: Colors.orange),
-                ),
-
-                const Icon(Icons.chat, color: Colors.grey),
-              ],
-            ),
-
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
 
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
                     child: const Text(
-                      "Edit",
-                      style: TextStyle(color: Colors.orange),
+                      "Cancel",
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: "Poppins",
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () async {
-                      try {
-                        // ✅ STEP 10B: VERIFY OTP
-                        await OtpService.verifyOtp(
-                          OtpService.userEmail!,
-                          otpController.text.trim(),
-                        );
-
-                        // ✅ SUCCESS → REGISTRATION SCREEN
-                        Navigator.pushNamedAndRemoveUntil(
-                          context,
-                          AppRoutes.shipperRegistration,
-                              (route) => false,
-                        );
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Invalid OTP"),
-                          ),
-                        );
-                      }
-                    },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: AppColors.primary, // Orange
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                    child: const Text("Confirm"),
+                    onPressed: _handleNext,
+                    child: const Text(
+                      "Next",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: "Poppins",
+                      ),
+                    ),
                   ),
                 ),
               ],

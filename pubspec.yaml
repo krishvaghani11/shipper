@@ -20,6 +20,8 @@ dependencies:
   url_launcher: ^6.2.6
   flutter_launcher_icons: ^0.14.4
   share_plus: ^12.0.1
+  flutter_secure_storage: ^10.0.0
+  geolocator: ^14.0.2
 
 dev_dependencies:
   flutter_test:
@@ -29,9 +31,12 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - lib/assets/logo/
+    - assets/logo/
+    - lib/assets/images/
 
-flutter_launcher_icons:
-  android: true
-  ios: true
-  image_path: "lib/assets/logo/logo.jpeg"
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins-Medium.ttf
+        - asset: assets/fonts/Poppins-SemiBold.ttf

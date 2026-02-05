@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../branch/branch_screen.dart';
 import '../language/language_screen.dart';
 import '../registration/shipper_registration_screen.dart';
+import '../../routes/app_routes.dart';
+import '../../core/services/token_service.dart';
 import 'helpandsupport/help_support_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -56,10 +58,7 @@ class DashboardScreen extends StatelessWidget {
                   SizedBox(height: 1),
                   Text(
                     "APML1230",
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.white70,
-                    ),
+                    style: TextStyle(fontSize: 11, color: Colors.white70),
                   ),
                 ],
               ),
@@ -68,10 +67,7 @@ class DashboardScreen extends StatelessWidget {
         ),
 
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
           IconButton(
             icon: const Icon(Icons.notifications_none),
             onPressed: () {},
@@ -87,10 +83,7 @@ class DashboardScreen extends StatelessWidget {
           children: [
             const Text(
               "Welcome 👋",
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             const Text(
@@ -121,10 +114,7 @@ class DashboardScreen extends StatelessWidget {
 
             const Text(
               "Quick Actions",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 12),
@@ -172,18 +162,12 @@ class DashboardScreen extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               value,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
               title,
-              style: const TextStyle(
-                color: Colors.black54,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: Colors.black54, fontSize: 12),
             ),
           ],
         ),
@@ -232,10 +216,7 @@ class _ShipperDrawer extends StatelessWidget {
                     SizedBox(height: 4),
                     Text(
                       "Shipper",
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                   ],
                 ),
@@ -243,59 +224,37 @@ class _ShipperDrawer extends StatelessWidget {
             ),
           ),
 
-          _drawerItem(
-            Icons.person,
-            "User",
-                () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ShipperRegistrationScreen(),
-                ),
-              );
-            },
-          ),
+          _drawerItem(Icons.person, "User", () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ShipperRegistrationScreen(),
+              ),
+            );
+          }),
 
-          _drawerItem(
-            Icons.account_tree,
-            "Branch",
-                () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const BranchScreen(),
-                ),
-              );
-            },
-          ),
+          _drawerItem(Icons.account_tree, "Branch", () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const BranchScreen()),
+            );
+          }),
 
           _drawerItem(Icons.local_shipping, "Truck Tracking", () {}),
           _drawerItem(Icons.workspace_premium, "Membership", () {}),
           _drawerItem(Icons.card_giftcard, "Refer & Earn", () {}),
-          _drawerItem(
-              Icons.support_agent,
-              "Help & Support",
-                  () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const HelpSupportScreen(),
-                  ),
-                );
-                  }),
-          _drawerItem(
-            Icons.language,
-            "Language",
-                () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const LanguageScreen(),
-                ),
-              );
-            },
-          ),
-
+          _drawerItem(Icons.support_agent, "Help & Support", () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const HelpSupportScreen()),
+            );
+          }),
+          _drawerItem(Icons.language, "Language", () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const LanguageScreen()),
+            );
+          }),
 
           const Spacer(),
 
@@ -307,7 +266,23 @@ class _ShipperDrawer extends StatelessWidget {
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.logout, color: Colors.orange),
                     label: const Text("Logout"),
-                    onPressed: () {},
+                    onPressed: () async {
+                      print("🔘 Logout Button Pressed");
+                      try {
+                        await TokenService.clearToken();
+                        print("✅ Token Cleared");
+
+                        if (context.mounted) {
+                          Navigator.pushNamedAndRemoveUntil(
+                            context,
+                            AppRoutes.login,
+                            (route) => false,
+                          );
+                        }
+                      } catch (e) {
+                        print("❌ Logout Error: $e");
+                      }
+                    },
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -329,8 +304,7 @@ class _ShipperDrawer extends StatelessWidget {
     );
   }
 
-  Widget _drawerItem(
-      IconData icon, String title, VoidCallback onTap) {
+  Widget _drawerItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
       leading: Icon(icon, color: Colors.orange),
       title: Text(title),
@@ -373,10 +347,7 @@ class _ActionTile extends StatelessWidget {
             Text(
               label,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -384,5 +355,3 @@ class _ActionTile extends StatelessWidget {
     );
   }
 }
-
-

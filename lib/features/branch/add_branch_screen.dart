@@ -92,10 +92,7 @@ class _AddBranchScreenState extends State<AddBranchScreen> {
 
                 child: const Text(
                   "Save Branch",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -125,35 +122,27 @@ class _AddBranchScreenState extends State<AddBranchScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: DropdownButtonFormField<String>(
-        value: designation,
+        initialValue: designation,
         items: const [
-          DropdownMenuItem(
-            value: "Consignor",
-            child: Text("Consignor"),
-          ),
-          DropdownMenuItem(
-            value: "Consignee",
-            child: Text("Consignee"),
-          ),
+          DropdownMenuItem(value: "Consignor", child: Text("Consignor")),
+          DropdownMenuItem(value: "Consignee", child: Text("Consignee")),
         ],
         onChanged: (v) => setState(() => designation = v!),
         decoration: InputDecoration(
           labelText: "Designation",
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
   }
 
   Widget _field(
-      String label,
-      TextEditingController ctrl, {
-        TextInputType keyboard = TextInputType.text,
-        bool enabled = true,
-        Widget? prefix,
-      }) {
+    String label,
+    TextEditingController ctrl, {
+    TextInputType keyboard = TextInputType.text,
+    bool enabled = true,
+    Widget? prefix,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: TextField(
@@ -163,9 +152,7 @@ class _AddBranchScreenState extends State<AddBranchScreen> {
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: prefix,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
@@ -176,11 +163,7 @@ class _AddBranchScreenState extends State<AddBranchScreen> {
       padding: EdgeInsets.only(left: 12, right: 8),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          Text("🇮🇳"),
-          SizedBox(width: 6),
-          Text("+91"),
-        ],
+        children: [Text("🇮🇳"), SizedBox(width: 6), Text("+91")],
       ),
     );
   }

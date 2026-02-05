@@ -2,6 +2,7 @@ const express = require("express");
 const User = require("../models/User");
 const { generateOtp } = require("../utils/generateOtp");
 const { sendOtpEmail } = require("../services/emailService");
+const jwt = require("jsonwebtoken");
 
 const router = express.Router();
 
@@ -12,23 +13,33 @@ router.post("/init-login", async (req, res) => {
     const { mobileNumber, email } = req.body;
     console.log("🔐 INIT LOGIN:", { mobileNumber, email });
 
-    if (!mobileNumber || !email) {
+    // ✅ ALLOW MOBILE ONLY LOGIN
+    if (!mobileNumber) {
       return res.status(400).json({
         success: false,
-        message: "Mobile number and email are required",
+        message: "Mobile number is required",
       });
     }
 
-    let user = await User.findOne({ email });
+    // Find by mobile OR email (if provided)
+    let query = { mobileNumber };
+    if (email) query = { $or: [{ mobileNumber }, { email }] };
+
+    let user = await User.findOne(query);
 
     if (!user) {
       user = await User.create({
         mobileNumber,
-        email,
+        email: email || "", // Allow empty email
       });
       console.log("🆕 New user created");
     } else {
       console.log("👤 Existing user found");
+      // Update email if provided and currently empty
+      if (email && !user.email) {
+        user.email = email;
+        await user.save();
+      }
     }
 
     res.json({ success: true });
@@ -69,10 +80,15 @@ router.post("/send-email-otp", async (req, res) => {
 /* ================= VERIFY OTP ================= */
 router.post("/verify-otp", async (req, res) => {
   try {
-    const { email, otp } = req.body;
-    console.log("✅ VERIFY OTP:", { email, otp });
+    const { email, otp, mobileNumber } = req.body;
+    console.log("✅ VERIFY OTP:", { email, mobileNumber, otp });
 
-    const user = await User.findOne({ email });
+    let query = {};
+    if (mobileNumber) query.mobileNumber = mobileNumber;
+    else if (email) query.email = email;
+    else return res.status(400).json({ success: false, message: "Email or Mobile required" });
+
+    const user = await User.findOne(query);
     if (!user) {
       return res.status(404).json({ success: false });
     }
@@ -91,10 +107,42 @@ router.post("/verify-otp", async (req, res) => {
     await user.save();
 
     console.log("✅ OTP VERIFIED");
-    res.json({ success: true });
+
+    // Check if registration is complete (e.g., checks for companyName)
+    const isRegistrationComplete = !!user.companyName;
+
+    // ✅ GENERATE TOKEN
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "fallbacksecret", {
+      expiresIn: "30d",
+    });
+
+    res.json({ success: true, isRegistrationComplete, token });
   } catch (err) {
     console.error("❌ VERIFY OTP ERROR:", err.message);
     res.status(500).json({ success: false });
+  }
+});
+
+/* ================= GET USER DETAILS ================= */
+router.get("/me", async (req, res) => {
+  try {
+    const { email } = req.query; // Get email from query params
+    console.log("👤 GET USER DETAILS:", email);
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error("❌ GET USER ERROR:", error.message);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
@@ -102,11 +150,12 @@ router.post("/verify-otp", async (req, res) => {
 router.post("/register", async (req, res) => {
   try {
     const { email } = req.body;
+    console.log("📝 REGISTER REQUEST BODY:", req.body);
 
     const user = await User.findOneAndUpdate(
       { email },
       { $set: req.body },
-      { new: true }
+      { new: true, upsert: true }
     );
 
     if (!user) {
